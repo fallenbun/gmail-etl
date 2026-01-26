@@ -1,6 +1,13 @@
+import os.path
+from pathlib import Path
 from client import GmailApi
 import json
 from bs4 import BeautifulSoup
+import postgres.crud as pg
+
+FILE_PATH = os.path.dirname(os.path.realpath(__file__))
+RAWDATA_PATH = str(Path(FILE_PATH, "raw_data.json"))
+PARSED_DATA_PATH = str(Path(FILE_PATH, "parsed_data.json"))
 
 
 def main():
@@ -17,14 +24,14 @@ def main():
     for email_id in email_ids:
         contents[email_id] = client.get_email(email_id)
 
-    with open('raw_data.json', 'w') as f:
+    with open(RAWDATA_PATH, 'w') as f:
         json.dump(contents, f)
     """
     save_to_file(parse_data())
 
 
 def parse_data():
-    with open('raw_data.json', 'r') as f:
+    with open(RAWDATA_PATH, 'r') as f:
         d = json.load(f)
     for key in d.keys():
         soup = BeautifulSoup(d[key]["content"], 'html.parser')
@@ -63,7 +70,7 @@ def parse_data():
 
 
 def save_to_file(parsed_data):
-    with open('parsed_data.json', 'w') as f:
+    with open(PARSED_DATA_PATH, 'w') as f:
         json.dump(parsed_data, f, indent=4)
 
 
