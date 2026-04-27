@@ -1,8 +1,8 @@
+# Авторизация, чтение писем по фильтру
 import base64
 from googleapiclient.errors import HttpError
 
 from auth.auth import authenticate
-
 
 class GmailApi:
     def __init__(self):
