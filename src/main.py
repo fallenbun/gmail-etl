@@ -1,5 +1,8 @@
 import os.path
 from pathlib import Path
+import os.path
+from pathlib import Path
+from client import GmailApi
 import json
 from gmail_client import GmailApi
 from receipt_parser import ReceiptParser
@@ -12,6 +15,12 @@ FILE_PATH = os.path.dirname(os.path.realpath(__file__))
 RAWDATA_PATH = str(Path(FILE_PATH, "data/raw_data.json"))
 PARSED_DATA_PATH = str(Path(FILE_PATH, "data/parsed_data.json"))
 PARSED_DATA_CSV_PATH = str(Path(FILE_PATH, "data/parsed_data.csv"))
+from bs4 import BeautifulSoup
+import postgres.crud as pg
+
+FILE_PATH = os.path.dirname(os.path.realpath(__file__))
+RAWDATA_PATH = str(Path(FILE_PATH, "raw_data.json"))
+PARSED_DATA_PATH = str(Path(FILE_PATH, "parsed_data.json"))
 
 
 def main():
