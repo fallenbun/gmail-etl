@@ -4,10 +4,10 @@ import json
 from bs4 import BeautifulSoup
 
 class ReceiptParser:
-    def __init__(self):
-        pass
+    def __init__(self, full_msg):
+        self.full_msg = full_msg
     
-    def parse_lenta():
+    def parse_lenta(self):
     
         FILE_PATH = os.path.dirname(os.path.realpath(__file__))
         RAWDATA_PATH = Path(FILE_PATH, "data/raw_data.json")

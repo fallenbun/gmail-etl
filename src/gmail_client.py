@@ -1,8 +1,11 @@
 # Авторизация, чтение писем по фильтру
 import base64
 from googleapiclient.errors import HttpError
-
+from datetime import datetime
 from auth.auth import authenticate
+import logging
+
+logger = logging.getLogger(__name__)
 
 class GmailApi:
     def __init__(self):
@@ -18,10 +21,10 @@ class GmailApi:
         result = self._execute_request(request)
         try:
             messages = result.get('messages', [])
-            print(
+            logger.info(
                 f"Retrieved messages matching the '{sender}' query: {messages}")
         except KeyError:
-            print(f"No messages found for the sender '{sender}'")
+            logger.error(f"No messages found for the sender '{sender}'")
             messages = []
 
         return messages
@@ -34,33 +37,35 @@ class GmailApi:
         )
         result = self._execute_request(request)
         try:
-            data = {}
-            data["mime_type"] = result["payload"]["mimeType"]
+            headers = {h["name"]: h["value"]
+                       for h in result.get("payload", {}).get("headers", [])}
+            sender = headers.get("From", "")
+            if sender:
+                sender_email = sender.split("<")[1].rstrip(">").strip()
+            received_at = headers.get("Date", "")
+            if received_at:
+                try:
+                    date_dt = datetime.strptime(
+                        received_at, "%a, %d %b %Y %H:%M:%S %z")
+                    received_at = date_dt.isoformat()
+                except Exception as e:
+                    logger.error(f"Date cannot be parsed: {received_at}")
 
-            headers = result["payload"]["headers"]
-            data["subject"] = data["sender"] = data["date"] = ''
-            data["contentType"] = ''
-            for h in headers:
-                name, value = h['name'], h['value']
-                if name == 'Subject':
-                    data["subject"] = value
-                elif name == 'From':
-                    data["sender"] = value
-                elif name == 'Date':
-                    data["date"] = value
-                elif name == 'Content-Transfer-Encoding':
-                    data["contentType"] = value
-            content = result["payload"]["body"]["data"]
+            content = result.get("payload", {}).get("body", {}).get("data", {})
             content = content.replace("-", "+").replace("_", "/")
-            data["content"] = base64.b64decode(content).decode("utf-8")
+            decoded = base64.b64decode(content).decode("utf-8")
         except Exception as e:
-            print(e)
-        return data
+            logger.error(f"An error of loading email content'{e}")
+
+        return {"message_id": email_id,
+                "sender_email": sender_email,
+                "received_at": received_at,
+                "content": decoded}
 
     @staticmethod
     def _execute_request(request):
         try:
             return request.execute()
         except HttpError as e:
-            print(f"An error occurred: {e}")
+            logger.critical(f"An error occurred: {e}")
             raise RuntimeError(e)
