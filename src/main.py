@@ -1,30 +1,36 @@
-from pathlib import Path
-from gmail_client import GmailApi
-from file_writer import JsonFileWriter
-from receipt_parser import ReceiptParser
+from config.config import settings
+import psycopg2
+from loader import EmailLoader, ReceiptLoader
+import sys
 import logging
 
 logger = logging.getLogger(__name__)
 
 
 def main():
+    FORMAT = "%(asctime)s - %(levelname)s - %(funcName)s - %(message)s"
     logging.basicConfig(filename='./py_log.log', encoding="utf-8", level=logging.INFO,
-                        filemode='w', format="%(asctime)s - %(levelname)s - %(message)s")
-    BASE_DIR = Path(__file__).parent.parent
-    RAWDATA_PATH = BASE_DIR.joinpath('raw_data', 'staging')
-
-    client = GmailApi()
-    writer = JsonFileWriter(base_dir=RAWDATA_PATH)
-    
+                        filemode='w', format=FORMAT)
+    credentials = {
+        "host": settings.DB_HOST,
+        "port": settings.DB_PORT,
+        "user": settings.DB_USER,
+        "password": settings.DB_PASSWORD.get_secret_value(),
+        "dbname": settings.DB_NAME
+    }
     sender = "ОФД Такском"
-    messages = client.find_emails(sender)
-    for msg in messages:
-        if not writer.exists(msg["id"]):
-            full_msg = client.get_email(msg["id"])
-            parser = ReceiptParser(message_body=full_msg["payload_data"])
-            full_msg["parsed"] = parser.parse_lenta()
-            writer.save(full_msg)
-        
+    try:
+        connection = psycopg2.connect(**credentials)
+        logger.info(f"Connection succeeded")
+    except psycopg2.Error as error:
+        logger.error(f"Error connecting to the database: {error}")
+        sys.exit()
+
+    email_loader = EmailLoader(db_conn=connection)
+    email_loader.load_emails(sender=sender)
+
+    receipt_loader = ReceiptLoader(db_conn=connection)
+    receipt_loader.load_receipts()
 
 
 if __name__ == "__main__":
