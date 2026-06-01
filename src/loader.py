@@ -16,10 +16,13 @@ class EmailLoader:
 
     def load_emails(self, sender: str):
         messages = self.client.find_emails(sender)
-        for msg in messages:
-            if not self._email_exists(msg["id"]):
-                record = self.client.get_email(msg["id"])
-                self._insert_email(record)
+        try:
+            for msg in messages:
+                if not self._email_exists(msg["id"]):
+                    record = self.client.get_email(msg["id"])
+                    self._insert_email(record)
+        except Exception as error:
+            logger.error(f"Cannot load emails: {error}")
 
     def _email_exists(self, message_id: str):
         try:

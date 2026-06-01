@@ -22,15 +22,17 @@ def main():
     try:
         connection = psycopg2.connect(**credentials)
         logger.info(f"Connection succeeded")
+
+        email_loader = EmailLoader(db_conn=connection)
+        email_loader.load_emails(sender=sender)
+
+        receipt_loader = ReceiptLoader(db_conn=connection)
+        receipt_loader.load_receipts()
     except psycopg2.Error as error:
         logger.error(f"Error connecting to the database: {error}")
         sys.exit()
-
-    email_loader = EmailLoader(db_conn=connection)
-    email_loader.load_emails(sender=sender)
-
-    receipt_loader = ReceiptLoader(db_conn=connection)
-    receipt_loader.load_receipts()
+    finally:
+        connection.close()
 
 
 if __name__ == "__main__":
