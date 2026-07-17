@@ -75,8 +75,10 @@ class ReceiptLoader:
                 self._insert_parsed(record)
                 self._update_parsed_status(raw_id=raw_id, status=1)
                 self.conn.commit()
-        except psycopg2.Error as error:
+        except (Exception, psycopg2.Error) as error:
             self.conn.rollback()
+            self._update_parsed_status(raw_id=raw_id, status=-1)
+            self.conn.commit()
             logger.error(f"Fail loading receipts: {error}")
 
     def _fetch_unparsed(self):
