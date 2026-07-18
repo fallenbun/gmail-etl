@@ -1,0 +1,21 @@
+name: 'gmail_etl'
+version: '1.0.0'
+
+profile: 'gmail_etl'
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+
+models:
+  gmail_etl:
+    core:
+      +materialized: table

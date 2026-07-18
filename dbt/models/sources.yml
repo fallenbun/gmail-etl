@@ -1,0 +1,5 @@
+sources:
+  - name: raw
+    schema: stg_raw
+    tables:
+      - name: receipts 
