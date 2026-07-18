@@ -26,7 +26,7 @@ class EmailLoader:
 
     def _email_exists(self, message_id: str):
         try:
-            select_query = sql.SQL("SELECT 1 FROM stg_raw.stg_emails WHERE message_id = {}").format(
+            select_query = sql.SQL("SELECT 1 FROM stg_raw.emails WHERE message_id = {}").format(
                 sql.Placeholder())
             cur = self.conn.cursor()
             cur.execute(select_query, (message_id,))
@@ -37,7 +37,7 @@ class EmailLoader:
             cur.close()
 
     def _insert_email(self, record):
-        insert_query = sql.SQL("INSERT INTO stg_raw.stg_emails ({}) VALUES ({})").format(
+        insert_query = sql.SQL("INSERT INTO stg_raw.emails ({}) VALUES ({})").format(
             sql.SQL(', ').join(map(sql.Identifier, record.keys())),
             sql.SQL(', ').join(sql.Placeholder() * len(record.values()))
         )
@@ -84,7 +84,7 @@ class ReceiptLoader:
     def _fetch_unparsed(self):
         try:
             query = sql.SQL(
-                "SELECT raw_id, message_id, payload_data FROM stg_raw.stg_emails WHERE parse_status = 0")
+                "SELECT raw_id, message_id, payload_data FROM stg_raw.emails WHERE parse_status = 0")
             cur = self.conn.cursor()
             cur.execute(query)
             return cur.fetchall()
@@ -94,7 +94,7 @@ class ReceiptLoader:
             cur.close()
 
     def _insert_parsed(self, dictionary):
-        query = sql.SQL("INSERT INTO stg_raw.stg_receipts ({}) VALUES ({})").format(
+        query = sql.SQL("INSERT INTO stg_raw.receipts ({}) VALUES ({})").format(
             sql.SQL(', ').join(map(sql.Identifier, dictionary.keys())),
             sql.SQL(', ').join(sql.Placeholder() * len(dictionary.values()))
         )
@@ -109,7 +109,7 @@ class ReceiptLoader:
             cur.close()
 
     def _update_parsed_status(self, raw_id, status):
-        query = sql.SQL("UPDATE stg_raw.stg_emails SET parse_status = {}, parsed_at = {} WHERE raw_id = {}").format(
+        query = sql.SQL("UPDATE stg_raw.emails SET parse_status = {}, parsed_at = {} WHERE raw_id = {}").format(
             sql.Placeholder(),
             sql.Placeholder(),
             sql.Placeholder()
