@@ -19,3 +19,6 @@ models:
   gmail_etl:
     core:
       +materialized: table
+    staging:
+      +materialized: view
+      +schema: 'stg_raw'
