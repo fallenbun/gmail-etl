@@ -19,6 +19,11 @@ models:
   gmail_etl:
     core:
       +materialized: table
-    staging:
+      +schema: 'stg_transformed'
+      +on_schema_change: append_new_columns
+    raw:
       +materialized: view
       +schema: 'stg_raw'
+    prepared:
+      +materialized: view
+      +schema: 'stg_prepared'

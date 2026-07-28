@@ -1,19 +1,21 @@
 {{
     config(
-        materialized='table'
+        materialized='incremental',
+        unique_key='receipt_hash'
     )
 }}
 with source as (
-    select md5(concat(receipt_id, date_purchase))::bytea     as receipt_hash,
-           receipt_id                                        as receipt_id,
-           date_purchase                                     as date_purchase,
-           current_timestamp                                 as load_date,
-           '{{ source('raw','receipts') }}'                  as record_source
-      from {{ source('raw','receipts') }}
+    select receipt_hash,
+           receipt_id,
+           date_purchase,
+           current_timestamp::timestamp    as load_date,
+           '{{ ref('receipt_dedup') }}'    as record_source
+      from {{ ref('receipt_dedup') }}
 )
 
-select distinct *
+select *
   from source
-where receipt_hash not in (
-    select receipt_hash from {{ this }}
-)
+
+{% if is_incremental() %}
+ where receipt_hash not in (select receipt_hash from {{ this }})
+{% endif %}

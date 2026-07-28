@@ -1,18 +1,20 @@
 {{
     config(
-        materialized='table'
+        materialized='incremental',
+        unique_key='store_hash'
     )
 }}
 with source as (
-    select md5(store_json->>'rnn')::bytea     as store_hash,
-           store_json->>'rnn'                 as store_rnn,
-           current_timestamp                  as load_date,
-           '{{ source('raw','receipts') }}'   as record_source
-      from {{ source('raw','receipts') }}
+    select store_hash,
+           rnn,
+           current_timestamp::timestamp  as load_date,
+           '{{ ref('store_dedup') }}'    as record_source
+      from {{ ref('store_dedup') }}
 )
 
-select distinct *
+select *
   from source
-where store_hash not in (
-    select store_hash from {{ this }}
-)
+
+{% if is_incremental() %}
+ where store_hash not in (select store_hash from {{ this }})
+{% endif %}

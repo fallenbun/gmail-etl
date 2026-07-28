@@ -1,0 +1,148 @@
+models:
+  - name: hub_store
+    description: Data Vault hub for store business keys (RNN).
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: store_hash
+        data_type: bytea
+        description: Surrogate hash key for the store.
+        constraints:
+          - type: primary_key
+      - name: rnn
+        data_type: varchar(12)
+        description: Store registration number (business key).
+        constraints:
+          - type: not_null
+      - name: load_date
+        data_type: timestamp
+        description: Timestamp when the record was loaded into the vault.
+        constraints:
+          - type: not_null
+      - name: record_source
+        data_type: text
+        description: Name of the upstream dbt model or source system.
+        constraints:
+          - type: not_null
+
+  - name: hub_receipt
+    description: Data Vault hub for receipt business keys.
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: receipt_hash
+        data_type: bytea
+        description: Surrogate hash key for the receipt.
+        constraints:
+          - type: primary_key
+      - name: receipt_id
+        data_type: varchar(8)
+        description: Receipt identifier (business key component).
+        constraints:
+          - type: not_null
+      - name: date_purchase
+        data_type: timestamp
+        description: Purchase date (business key component).
+        constraints:
+          - type: not_null
+      - name: load_date
+        data_type: timestamp
+        constraints:
+          - type: not_null
+      - name: record_source
+        data_type: text
+        constraints:
+          - type: not_null
+
+  - name: hub_product
+    description: Data Vault hub for product business keys.
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: product_hash
+        data_type: bytea
+        constraints:
+          - type: primary_key
+      - name: name
+        data_type: text
+        constraints:
+          - type: not_null
+      - name: load_date
+        data_type: timestamp
+        constraints:
+          - type: not_null
+      - name: record_source
+        data_type: text
+        constraints:
+          - type: not_null
+
+  - name: link_receipt_store
+    description: Data Vault link between receipts and stores.
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: receipt_store_hash
+        data_type: bytea
+        description: Surrogate hash key for the receipt–store relationship.
+        constraints:
+          - type: primary_key
+      - name: receipt_hash
+        data_type: bytea
+        constraints:
+          - type: not_null
+          - type: foreign_key
+            to: ref('hub_receipt')
+            to_columns: [receipt_hash]
+      - name: store_hash
+        data_type: bytea
+        constraints:
+          - type: not_null
+          - type: foreign_key
+            to: ref('hub_store')
+            to_columns: [store_hash]
+      - name: load_date
+        data_type: timestamp
+        constraints:
+          - type: not_null
+      - name: record_source
+        data_type: text
+        constraints:
+          - type: not_null
+
+  - name: link_receipt_product
+    description: Data Vault link between receipts and products.
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: receipt_product_hash
+        data_type: bytea
+        description: Surrogate hash key for the receipt–product relationship.
+        constraints:
+          - type: primary_key
+      - name: receipt_hash
+        data_type: bytea
+        constraints:
+          - type: not_null
+          - type: foreign_key
+            to: ref('hub_receipt')
+            to_columns: [receipt_hash]
+      - name: product_hash
+        data_type: bytea
+        constraints:
+          - type: not_null
+          - type: foreign_key
+            to: ref('hub_product')
+            to_columns: [product_hash]
+      - name: load_date
+        data_type: timestamp
+        constraints:
+          - type: not_null
+      - name: record_source
+        data_type: text
+        constraints:
+          - type: not_null
