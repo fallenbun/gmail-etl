@@ -33,3 +33,8 @@ select receipt_store_hash,
        record_source
   from dedup
  where rn = 1
+
+{% if is_incremental() %}
+   and receipt_store_hash not in (
+    select receipt_store_hash from {{ this }})
+{% endif %}
