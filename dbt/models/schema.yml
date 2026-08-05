@@ -26,6 +26,53 @@ models:
         constraints:
           - type: not_null
 
+  - name: sat_store
+    description: Data Vault satellite with descriptive store attributes.
+    config:
+      contract:
+        enforced: true
+    constraints:
+      - type: primary_key
+        columns: [store_hash, load_date]
+
+    columns:
+      - name: store_hash
+        data_type: bytea
+        description: Foreign key to hub_store.
+        constraints:
+          - type: not_null
+          - type: foreign_key
+            to: ref('hub_store')
+            to_columns: [store_hash]
+      - name: load_date
+        data_type: timestamp
+        description: Timestamp when the satellite record was loaded.
+        constraints:
+          - type: not_null
+      - name: record_source
+        data_type: text
+        constraints:
+          - type: not_null
+      - name: hash_diff
+        data_type: bytea
+        description: Hash of descriptive attributes for change detection.
+        constraints:
+          - type: not_null
+      - name: rnn
+        data_type: varchar(12)
+        constraints:
+          - type: not_null
+      - name: name
+        data_type: text
+        constraints:
+          - type: not_null
+      - name: company
+        data_type: text
+      - name: address
+        data_type: text
+        constraints:
+          - type: not_null
+
   - name: hub_receipt
     description: Data Vault hub for receipt business keys.
     config:
@@ -53,6 +100,39 @@ models:
           - type: not_null
       - name: record_source
         data_type: text
+        constraints:
+          - type: not_null
+
+  - name: sat_receipt
+    description: Data Vault satellite with descriptive receipt attributes.
+    config:
+      contract:
+        enforced: true
+    constraints:
+      - type: primary_key
+        columns: [receipt_hash, load_date]
+    columns:
+      - name: receipt_hash
+        data_type: bytea
+        constraints:
+          - type: not_null
+          - type: foreign_key
+            to: ref('hub_receipt')
+            to_columns: [receipt_hash]
+      - name: load_date
+        data_type: timestamp
+        constraints:
+          - type: not_null
+      - name: record_source
+        data_type: text
+        constraints:
+          - type: not_null
+      - name: hash_diff
+        data_type: bytea
+        constraints:
+          - type: not_null
+      - name: total
+        data_type: numeric(12, 2)
         constraints:
           - type: not_null
 
@@ -144,5 +224,46 @@ models:
           - type: not_null
       - name: record_source
         data_type: text
+        constraints:
+          - type: not_null
+
+  - name: sat_receipt_product_line
+    description: Data Vault satellite with line-item details for receipt–product links.
+    config:
+      contract:
+        enforced: true
+    constraints:
+      - type: primary_key
+        columns: [receipt_product_hash, load_date]
+    columns:
+      - name: receipt_product_hash
+        data_type: bytea
+        constraints:
+          - type: not_null
+          - type: foreign_key
+            to: ref('link_receipt_product')
+            to_columns: [receipt_product_hash]
+      - name: load_date
+        data_type: timestamp
+        constraints:
+          - type: not_null
+      - name: record_source
+        data_type: text
+        constraints:
+          - type: not_null
+      - name: hash_diff
+        data_type: bytea
+        constraints:
+          - type: not_null
+      - name: quantity
+        data_type: numeric(10, 3)
+        constraints:
+          - type: not_null
+      - name: price_per_item
+        data_type: numeric(12, 2)
+        constraints:
+          - type: not_null
+      - name: total_price
+        data_type: numeric(12, 2)
         constraints:
           - type: not_null
