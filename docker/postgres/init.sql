@@ -1,3 +1,7 @@
+CREATE DATABASE retail;
+
+\c retail
+
 CREATE SCHEMA IF NOT EXISTS stg_raw;
 
 CREATE TABLE IF NOT EXISTS stg_raw.emails (
