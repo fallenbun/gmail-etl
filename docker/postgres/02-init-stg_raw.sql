@@ -1,5 +1,3 @@
-CREATE DATABASE retail;
-
 \c retail
 
 CREATE SCHEMA IF NOT EXISTS stg_raw;
