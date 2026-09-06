@@ -39,4 +39,4 @@ def authenticate():
         # Save the credentials for the next run
         with open(TOKEN_PATH, "w") as token:
             token.write(creds.to_json())
-    return build("gmail", "v1", credentials=creds)
+    return build("gmail", "v1", credentials=creds, cache_discovery=False)
