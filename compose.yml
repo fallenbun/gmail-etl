@@ -16,7 +16,7 @@ x-airflow-common:
     AIRFLOW__API__AUTH_BACKEND: 'airflow.api.auth.backend.basic_auth'
     AIRFLOW__API_AUTH__JWT_SECRET: ${AIRFLOW__API_AUTH__JWT_SECRET:-airflow_jwt_secret}
     AIRFLOW__API_AUTH__JWT_ISSUER: ${AIRFLOW__API_AUTH__JWT_ISSUER:-airflow}
-    AIRFLOW__LOGGING__LOGGING_LEVEL: ERROR
+    AIRFLOW__LOGGING__LOGGING_LEVEL: INFO
     AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
     AIRFLOW_CONN_RETAIL: postgresql://airflow:${POSTGRES_MASTER_AIRFLOW_PASSWORD}@postgres-master/${POSTGRES_MASTER_DB}
     PYTHONPATH: /opt/airflow/src
@@ -136,6 +136,26 @@ services:
       airflow-init:
         condition: service_completed_successfully
 
+  python:
+    container_name: python
+    build:
+      context: .
+      dockerfile: docker/python/Dockerfile
+    command: sleep infinity # for development
+    environment:
+      PY_HOST: postgres-master
+      PY_PORT: 5432
+      PY_DBNAME: ${POSTGRES_MASTER_DB}
+      PY_USER: ${POSTGRES_MASTER_USER}
+      PY_PASSWORD: ${POSTGRES_MASTER_PASSWORD}
+    volumes:
+      - type: bind
+        source: ./src
+        target: /src
+    restart: no
+    depends_on:
+      postgres-master:
+        condition: service_healthy
 volumes:
   master-pgdata:
   airflow-pgdata:
