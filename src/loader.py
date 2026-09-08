@@ -59,9 +59,9 @@ class ReceiptLoader:
         self.conn = db_conn
 
     def load_receipts(self):
-        try:
-            emails = self._fetch_unparsed()
-            for raw_id, msg_id, payload in emails:
+        emails = self._fetch_unparsed()
+        for raw_id, msg_id, payload in emails:
+            try:
                 parser = ReceiptParser(payload)
                 parsed = parser.parse_lenta()
                 record = {
@@ -75,11 +75,11 @@ class ReceiptLoader:
                 self._insert_parsed(record)
                 self._update_parsed_status(raw_id=raw_id, status=1)
                 self.conn.commit()
-        except (Exception, psycopg2.Error) as error:
-            self.conn.rollback()
-            self._update_parsed_status(raw_id=raw_id, status=-1)
-            self.conn.commit()
-            logger.error(f"Fail loading receipts: {error}")
+            except (Exception, psycopg2.Error) as error:
+                self.conn.rollback()
+                self._update_parsed_status(raw_id=raw_id, status=-1)
+                self.conn.commit()
+                raise RuntimeError(f"Fail loading receipt {raw_id}: {error}") from error
 
     def _fetch_unparsed(self):
         try:
@@ -89,7 +89,7 @@ class ReceiptLoader:
             cur.execute(query)
             return cur.fetchall()
         except psycopg2.Error as error:
-            logger.warning(f"Cannot fetch emails: {error}")
+            raise RuntimeError(f"Cannot fetch emails: {error}") from error
         finally:
             cur.close()
 
@@ -104,7 +104,7 @@ class ReceiptLoader:
             cur.execute(query, record_to_insert)
         except psycopg2.Error as error:
             self.conn.rollback()
-            logger.error(f"Cannot insert data: {error}")
+            raise RuntimeError(f"Cannot insert data: {error}") from error
         finally:
             cur.close()
 
@@ -119,6 +119,6 @@ class ReceiptLoader:
             cur.execute(query, (status, datetime.now(), raw_id))
         except psycopg2.Error as error:
             self.conn.rollback()
-            logger.error(f"Cannot update status: {error}")
+            raise RuntimeError(f"Cannot update status: {error}") from error
         finally:
             cur.close()
