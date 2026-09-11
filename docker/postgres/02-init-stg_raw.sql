@@ -27,6 +27,8 @@ CREATE TABLE IF NOT EXISTS stg_raw.receipts (
 CREATE INDEX idx_stg_emails_msg_id ON stg_raw.emails(message_id);
 CREATE INDEX idx_stg_receipts_rec_id_dt ON stg_raw.receipts(receipt_id, date_purchase);
 
-GRANT USAGE ON SCHEMA stg_raw TO airflow;
-GRANT SELECT, INSERT, UPDATE ON stg_raw.emails, stg_raw.receipts TO airflow;
+GRANT ALL PRIVILEGES ON SCHEMA stg_raw TO airflow;
+GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA stg_raw TO airflow;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA stg_raw TO airflow;
+ALTER DEFAULT PRIVILEGES IN SCHEMA stg_raw GRANT SELECT, INSERT, UPDATE ON TABLES TO airflow;
+ALTER DEFAULT PRIVILEGES IN SCHEMA stg_raw GRANT USAGE, SELECT ON SEQUENCES TO airflow;

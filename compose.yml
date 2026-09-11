@@ -18,14 +18,18 @@ x-airflow-common:
     AIRFLOW__API_AUTH__JWT_ISSUER: ${AIRFLOW__API_AUTH__JWT_ISSUER:-airflow}
     AIRFLOW__LOGGING__LOGGING_LEVEL: INFO
     AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
-    AIRFLOW_CONN_RETAIL: postgresql://airflow:${POSTGRES_MASTER_AIRFLOW_PASSWORD}@postgres-master/${POSTGRES_MASTER_DB}
+    AIRFLOW_CONN_RETAIL: postgresql://airflow:${POSTGRES_MASTER_AIRFLOW_PASSWORD}@postgres-master:${POSTGRES_MASTER_PORT}/${POSTGRES_MASTER_DB}
     PYTHONPATH: /opt/airflow/src
+    HOST_PROJECT_DIR: ${HOST_PROJECT_DIR}
   volumes:  
     - ./src:/opt/airflow/src
     - ${AIRFLOW_PROJ_DIR}/dags:/opt/airflow/dags
     - ${AIRFLOW_PROJ_DIR}/logs:/opt/airflow/logs
     - ${AIRFLOW_PROJ_DIR}/config:/opt/airflow/config
     - ${AIRFLOW_PROJ_DIR}/plugins:/opt/airflow/plugins
+    - /var/run/docker.sock:/var/run/docker.sock
+  group_add:
+    - "${DOCKER_GID}"
   user: "${AIRFLOW_UID:-50000}:${AIRFLOW_GID:-50000}"
   depends_on:
     &airflow-common-depends-on
@@ -56,6 +60,8 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
+    networks:
+      - dwh_network
 
   airflow-postgres:
     image: postgres:17
@@ -75,6 +81,8 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
+    networks:
+      - dwh_network
 
   airflow-init:
     <<: *airflow-common
@@ -86,6 +94,8 @@ services:
       _AIRFLOW_WWW_USER_USERNAME: ${_AIRFLOW_WWW_USER_USERNAME:-airflow}
       _AIRFLOW_WWW_USER_PASSWORD: ${_AIRFLOW_WWW_USER_PASSWORD:-airflow}
     user: "0:0"
+    networks:
+      - dwh_network
   
   airflow-apiserver:
     <<: *airflow-common
@@ -103,6 +113,8 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
+    networks:
+      - dwh_network
 
   airflow-scheduler:
     <<: *airflow-common
@@ -119,6 +131,8 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
+    networks:
+      - dwh_network
 
   airflow-dag-processor:
     <<: *airflow-common
@@ -135,13 +149,15 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
+    networks:
+      - dwh_network
 
   python:
     container_name: python
     build:
       context: .
       dockerfile: docker/python/Dockerfile
-    command: sleep infinity # for development
+    #command: sleep infinity # for development
     environment:
       PY_HOST: postgres-master
       PY_PORT: 5432
@@ -149,13 +165,26 @@ services:
       PY_USER: ${POSTGRES_MASTER_USER}
       PY_PASSWORD: ${POSTGRES_MASTER_PASSWORD}
     volumes:
-      - type: bind
-        source: ./src
-        target: /src
+      - ./src:/src
     restart: no
     depends_on:
       postgres-master:
         condition: service_healthy
+    networks:
+      - dwh_network
+  
+  dbt:
+    container_name: dbt
+    build:
+      context: .
+      dockerfile: docker/dbt/Dockerfile
+    image: dbt-image
+
+networks:
+  dwh_network:
+    name: dwh_network
+    driver: bridge
+
 volumes:
   master-pgdata:
   airflow-pgdata:
