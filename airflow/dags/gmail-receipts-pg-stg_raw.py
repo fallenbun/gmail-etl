@@ -38,8 +38,8 @@ def load_receipts():
 
 with DAG(
     dag_id="gmail-receipts-pg-stg_raw",
-    start_date=datetime(2026, 9, 1),
-    schedule="@once",
+    start_date=datetime(2026, 9, 17),
+    schedule="@daily",
     catchup=False,
     tags=["gmail", "receipts"],
 ) as dag:

@@ -12,8 +12,8 @@ HOST_DBT_DIR = os.environ.get('HOST_PROJECT_DIR') + '/dbt'
 
 with DAG(
     dag_id="dbt-raw-transformed",
-    start_date=datetime(2026, 9, 1),
-    schedule="@once",
+    start_date=datetime(2026, 9, 17),
+    schedule="@daily",
     catchup=False,
     tags=["dbt", "transformed"],
 ) as dag:
