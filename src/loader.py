@@ -1,9 +1,10 @@
 import psycopg2
 import psycopg2.sql as sql
 import json
-from datetime import datetime
+import traceback
+from datetime import datetime, timezone
 from gmail_client import GmailApi
-from receipt_parser import ReceiptParser
+from receipt_parser import ReceiptParser, ReceiptParserError
 import logging
 
 logger = logging.getLogger(__name__)
@@ -25,6 +26,7 @@ class EmailLoader:
             logger.error(f"Cannot load emails: {error}")
 
     def _email_exists(self, message_id: str):
+        cur = None
         try:
             select_query = sql.SQL("SELECT 1 FROM stg_raw.emails WHERE message_id = {}").format(
                 sql.Placeholder())
@@ -34,7 +36,8 @@ class EmailLoader:
         except psycopg2.Error as error:
             logger.error(f"Error executing query: {error}")
         finally:
-            cur.close()
+            if cur is not None:
+                cur.close()
 
     def _insert_email(self, record):
         insert_query = sql.SQL("INSERT INTO stg_raw.emails ({}) VALUES ({})").format(
@@ -42,6 +45,7 @@ class EmailLoader:
             sql.SQL(', ').join(sql.Placeholder() * len(record.values()))
         )
         record_to_insert = tuple(record.values())
+        cur = None
         try:
             cur = self.conn.cursor()
             cur.execute(insert_query, record_to_insert)
@@ -50,7 +54,8 @@ class EmailLoader:
             self.conn.rollback()
             logger.error(f"Error executing query: {error}")
         finally:
-            cur.close()
+            if cur is not None:
+                cur.close()
 
 
 class ReceiptLoader:
@@ -75,25 +80,43 @@ class ReceiptLoader:
                 self._insert_parsed(record)
                 self._update_parsed_status(raw_id=raw_id, status=1)
                 self.conn.commit()
-            except (Exception, psycopg2.Error) as error:
+            except psycopg2.Error as error:
                 self.conn.rollback()
-                self._update_parsed_status(raw_id=raw_id, status=-1)
+                logger.error("Fail loading receipt %s: %s", msg_id, error)
+                self._update_parsed_status(
+                    raw_id=raw_id,
+                    status=-1,
+                    msg_id=msg_id,
+                    error_traceback=traceback.format_exc(),
+                )
                 self.conn.commit()
-                raise RuntimeError(f"Fail loading receipt {raw_id}: {error}") from error
+                raise RuntimeError(f"Fail loading receipt {msg_id}: {error}") from error
+            except ReceiptParserError as error:
+                logger.error("Fail loading receipt %s: %s", msg_id, error)
+                self._update_parsed_status(
+                    raw_id=raw_id,
+                    status=-1,
+                    msg_id=msg_id,
+                    error_traceback=traceback.format_exc()
+                )
+                self.conn.commit()
 
     def _fetch_unparsed(self):
+        cur = None
         try:
             query = sql.SQL(
-                "SELECT raw_id, message_id, payload_data FROM stg_raw.emails WHERE parse_status = 0")
+                "SELECT raw_id, message_id, payload_data FROM stg_raw.emails WHERE parse_status <> 1")
             cur = self.conn.cursor()
             cur.execute(query)
             return cur.fetchall()
         except psycopg2.Error as error:
             raise RuntimeError(f"Cannot fetch emails: {error}") from error
         finally:
-            cur.close()
+            if cur is not None:
+                cur.close()
 
     def _insert_parsed(self, dictionary):
+        cur = None
         query = sql.SQL("INSERT INTO stg_raw.receipts ({}) VALUES ({})").format(
             sql.SQL(', ').join(map(sql.Identifier, dictionary.keys())),
             sql.SQL(', ').join(sql.Placeholder() * len(dictionary.values()))
@@ -102,13 +125,12 @@ class ReceiptLoader:
         try:
             cur = self.conn.cursor()
             cur.execute(query, record_to_insert)
-        except psycopg2.Error as error:
-            self.conn.rollback()
-            raise RuntimeError(f"Cannot insert data: {error}") from error
         finally:
-            cur.close()
+            if cur is not None:
+                cur.close()
 
-    def _update_parsed_status(self, raw_id, status):
+    def _update_parsed_status(self, raw_id, status, msg_id=None, error_traceback=None):
+        cur = None
         query = sql.SQL("UPDATE stg_raw.emails SET parse_status = {}, parsed_at = {} WHERE raw_id = {}").format(
             sql.Placeholder(),
             sql.Placeholder(),
@@ -116,9 +138,16 @@ class ReceiptLoader:
         )
         try:
             cur = self.conn.cursor()
-            cur.execute(query, (status, datetime.now(), raw_id))
+            if status == -1:
+                query_error = sql.SQL("INSERT INTO stg_raw.email_errors (message_id, traceback) VALUES ({}, {})").format(
+                    sql.Placeholder(),
+                    sql.Placeholder()
+                )
+                cur.execute(query_error, (msg_id, error_traceback))
+            cur.execute(query, (status, datetime.now(timezone.utc), raw_id))
         except psycopg2.Error as error:
             self.conn.rollback()
-            raise RuntimeError(f"Cannot update status: {error}") from error
+            raise RuntimeError(f"Cannot update status {msg_id}: {error}") from error
         finally:
-            cur.close()
+            if cur is not None:
+                cur.close()

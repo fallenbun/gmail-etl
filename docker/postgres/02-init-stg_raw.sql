@@ -13,6 +13,13 @@ CREATE TABLE IF NOT EXISTS stg_raw.emails (
     parsed_at       TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS stg_raw.email_errors (
+    raw_id          SERIAL PRIMARY KEY,
+    message_id      VARCHAR(16) NOT NULL,
+    created_at      TIMESTAMP DEFAULT now(),
+    traceback       TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS stg_raw.receipts (
     raw_id          SERIAL PRIMARY KEY,
     message_id      VARCHAR(16) UNIQUE NOT NULL,
