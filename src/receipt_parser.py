@@ -1,6 +1,8 @@
 from bs4 import BeautifulSoup
 from datetime import datetime
 import logging
+from urllib.parse import urljoin, urlparse, parse_qs
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -12,9 +14,14 @@ class ReceiptParser:
     def __init__(self, message_body: str):
         self.message_body = message_body
 
-    def parse_lenta(self):
+    def parse_taxcom(self):
         try:
-            soup = BeautifulSoup(self.message_body, 'html.parser')
+            url = self.find_taxcom_url(self.message_body)
+            if url is None:
+                raise ReceiptParserError("Receipt URL not found")
+            response = requests.get(url)
+            response.raise_for_status()
+            soup = BeautifulSoup(response.text, 'html.parser')
             receipt_data = {}
 
             receipt_data["receipt_id"] = soup.find("span", class_="receipt-value-1042").text.strip()
@@ -53,3 +60,21 @@ class ReceiptParser:
         except Exception as e:
             raise ReceiptParserError(f"Message body cannot be parsed. Error {e}") from e
         return receipt_data
+
+    def find_taxcom_url(self, html: str) -> str | None:
+        soup = BeautifulSoup(html, "html.parser")
+
+        for link in soup.find_all("a", href=True):
+            url = urljoin("https://receipt.taxcom.ru/", link["href"])
+            parsed = urlparse(url)
+            query = parse_qs(parsed.query)
+
+            if (
+                parsed.scheme == "https"
+                and parsed.hostname == "receipt.taxcom.ru"
+                and parsed.path.rstrip("/") == "/v01/show"
+                and query.get("id")
+            ):
+                return url
+
+        return None
