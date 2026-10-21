@@ -15,15 +15,15 @@ class EmailLoader:
         self.conn = db_conn
         self.client = GmailApi()
 
-    def load_emails(self, sender: str):
-        messages = self.client.find_emails(sender)
-        try:
-            for msg in messages:
+    def load_emails(self, senders: list[str]):
+        messages = self.client.find_emails(senders)
+        for msg in messages:
+            try:
                 if not self._email_exists(msg["id"]):
                     record = self.client.get_email(msg["id"])
                     self._insert_email(record)
-        except Exception as error:
-            logger.error(f"Cannot load emails: {error}")
+            except Exception as error:
+                logger.error(f"Cannot load email {msg["id"]}: {error}")
 
     def _email_exists(self, message_id: str):
         cur = None

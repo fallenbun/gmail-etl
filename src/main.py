@@ -16,12 +16,17 @@ def main():
        if key.startswith("PY_"):
            credentials[key[3:].lower()] = value
 
-    sender = "ОФД Такском"
+    senders = [
+        "noreply@chek.pofd.ru",
+        "ofdreceipt@beeline.ru",
+        "noreply@taxcom.ru",
+        "info@ofd-magnit.ru"
+    ]
     try:
         connection = psycopg2.connect(**credentials)
         logger.info(f"Connection succeeded")
         email_loader = EmailLoader(db_conn=connection)
-        email_loader.load_emails(sender=sender)
+        email_loader.load_emails(senders=senders)
 
     except psycopg2.Error as error:
         logger.error(f"Error connecting to the database: {error}")
