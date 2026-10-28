@@ -68,7 +68,7 @@ class ReceiptLoader:
         for raw_id, msg_id, payload in emails:
             try:
                 parser = ReceiptParser(payload)
-                parsed = parser.parse_taxcom()
+                parsed = parser.parse()
                 record = {
                     "message_id": msg_id,
                     "receipt_id": parsed['receipt_id'],
